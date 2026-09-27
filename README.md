@@ -13,6 +13,8 @@ overrules them when they are wrong.
 and a human approves.* Nothing a model says reaches the graph without passing
 seven deterministic checks and then a person clicking Accept.
 
+![TaskFlow Pro Kanban Board](docs/screenshots/board-view.png)
+
 ---
 
 ## 60-second quickstart
@@ -20,12 +22,12 @@ seven deterministic checks and then a person clicking Accept.
 Requires **Node 24+** (for native TypeScript and `node:sqlite`). Nothing else.
 
 ```bash
-git clone <repo-url> && cd taskflow-pro
+git clone https://github.com/Eykagra/HACK-2026-101891.git && cd taskflow-pro
 npm install          # only devDependencies: typescript and @types/node
 npm start            # seeds a demo board on first boot
 ```
 
-Open <http://localhost:8080>. There is no build step and no API key required —
+Open <http://localhost:8080> (or <http://localhost> with Docker). There is no build step and no API key required —
 suggestions fall back to a deterministic offline provider.
 
 With Docker instead:
@@ -33,6 +35,20 @@ With Docker instead:
 ```bash
 docker compose up -d      # app + Caddy reverse proxy
 ```
+
+---
+
+## Interface Overview
+
+| Kanban Board & Live Critical Path | DAG Dependency Graph View |
+| :---: | :---: |
+| ![Kanban Board](docs/screenshots/board-view.png) | ![DAG Dependency Graph](docs/screenshots/graph-view.png) |
+
+| AI Dependency Proposals & Engine Gates | Task Detail & What-If Impact Drawer |
+| :---: | :---: |
+| ![AI Suggestions](docs/screenshots/ai-suggestions.png) | ![Task Detail Drawer](docs/screenshots/task-drawer.png) |
+
+---
 
 ### Try the parts that matter
 
