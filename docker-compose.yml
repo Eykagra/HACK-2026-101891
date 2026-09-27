@@ -1,0 +1,58 @@
+# One command brings up the app and a TLS-terminating reverse proxy.
+#
+#   docker compose up -d
+#
+# The named volume is the only stateful thing in the stack; losing the
+# container loses nothing.
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 8080
+      DATABASE_PATH: /app/data/taskflow.db
+      AI_MODE: ${AI_MODE:-consensus}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - taskflow-data:/app/data
+    # Not published to the host: Caddy is the only ingress.
+    expose:
+      - '8080'
+    healthcheck:
+      test:
+        ['CMD', 'node', '-e', "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 10s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+    environment:
+      # Set to a real hostname to get an automatic Let's Encrypt certificate.
+      # Left as :80, Caddy serves plain HTTP, which is the right default for an
+      # IP-only demo box.
+      SITE_ADDRESS: ${SITE_ADDRESS::80}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  taskflow-data:
+  caddy-data:
+  caddy-config:

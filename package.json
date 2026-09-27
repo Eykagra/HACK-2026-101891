@@ -1,0 +1,26 @@
+{
+  "name": "taskflow-pro",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependency-aware Kanban with a DAG scheduling engine",
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/main.ts",
+    "dev": "node --disable-warning=ExperimentalWarning --watch src/main.ts",
+    "db:seed": "node --disable-warning=ExperimentalWarning src/seed.ts",
+    "db:reset": "node --disable-warning=ExperimentalWarning src/seed.ts --reset",
+    "test": "node --disable-warning=ExperimentalWarning --test --test-reporter=spec 'test/*.test.ts'",
+    "test:engine": "node --disable-warning=ExperimentalWarning --test --test-reporter=spec 'test/engine.*.test.ts'",
+    "test:api": "node --disable-warning=ExperimentalWarning --test --test-reporter=spec 'test/api.test.ts'",
+    "test:ai": "node --disable-warning=ExperimentalWarning --test --test-reporter=spec 'test/ai.*.test.ts'",
+    "ai:eval": "node --disable-warning=ExperimentalWarning scripts/ai-eval.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.7.2"
+  }
+}

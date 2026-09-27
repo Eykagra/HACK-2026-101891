@@ -1,0 +1,28 @@
+# Caddy is here for three reasons, all of which would otherwise have to be
+# built into the app: automatic HTTPS, compression, and keeping the Node
+# process off a privileged port.
+#
+# Set SITE_ADDRESS to a hostname and Caddy provisions a Let's Encrypt
+# certificate on first request with no further configuration.
+
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Long-lived cache for fingerprint-free static assets is unsafe, so the
+	# app sets its own Cache-Control and this proxy does not override it.
+	reverse_proxy app:8080 {
+		header_up X-Forwarded-For {remote_host}
+		health_uri /api/health
+		health_interval 30s
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	log {
+		output stdout
+		format console
+	}
+}

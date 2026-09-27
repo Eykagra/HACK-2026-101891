@@ -1,0 +1,75 @@
+# CI is short because the project has no build step and no service
+# dependencies: type-check, lint the formatting, run 120 tests, confirm the
+# server actually boots and serves a correct board.
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npx prettier --check "src/**/*.ts" "test/**/*.ts" "web/**/*.{js,css,html}"
+      - run: npm test
+
+      # The offline provider means the AI path is exercised in CI with no key.
+      - run: npm run ai:eval
+
+      - name: Boot and smoke-test
+        run: |
+          AI_MODE=heuristic LOG_LEVEL=silent DATABASE_PATH=./data/ci.db \
+            node --disable-warning=ExperimentalWarning src/main.ts &
+          for _ in $(seq 1 20); do
+            curl -sf localhost:8080/api/health >/dev/null && break
+            sleep 1
+          done
+          curl -sf localhost:8080/api/health | tee /dev/stderr | grep -q '"status":"ok"'
+          # 10 tasks, 14 dependencies, and a non-empty critical path.
+          curl -sf localhost:8080/api/board \
+            | node -e '
+              const d = JSON.parse(require("fs").readFileSync(0, "utf8"));
+              const fail = (m) => { console.error(m); process.exit(1); };
+              if (d.tasks.length !== 10) fail(`expected 10 tasks, got ${d.tasks.length}`);
+              if (d.dependencies.length !== 14) fail("wrong dependency count");
+              if (d.criticalPath.length < 5) fail("critical path looks wrong");
+              console.log("smoke ok:", JSON.stringify(d.stats));
+            '
+          # A cycle must be refused with 409, not accepted.
+          IDS=$(curl -sf localhost:8080/api/board | node -e '
+            const d = JSON.parse(require("fs").readFileSync(0, "utf8"));
+            const id = (k) => d.tasks.find((t) => t.key === k).id;
+            console.log(id("TF-10"), id("TF-1"));
+          ')
+          set -- $IDS
+          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8080/api/dependencies \
+            -H 'content-type: application/json' -d "{\"predecessorId\":\"$1\",\"successorId\":\"$2\"}")
+          test "$CODE" = "409" || { echo "cycle was not rejected (got $CODE)"; exit 1; }
+          echo "cycle rejection ok"
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t taskflow-pro:ci .
+      - name: Container serves a healthy board
+        run: |
+          docker run -d --name tf -p 8080:8080 -e AI_MODE=heuristic taskflow-pro:ci
+          for _ in $(seq 1 30); do
+            curl -sf localhost:8080/api/health >/dev/null && break
+            sleep 2
+          done
+          curl -sf localhost:8080/api/health | grep -q '"status":"ok"'
+          docker logs tf
+          docker rm -f tf
