@@ -46,7 +46,7 @@ services:
       # Set to a real hostname to get an automatic Let's Encrypt certificate.
       # Left as :80, Caddy serves plain HTTP, which is the right default for an
       # IP-only demo box.
-      SITE_ADDRESS: ${SITE_ADDRESS::80}
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     volumes:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
